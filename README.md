@@ -31,16 +31,16 @@ Die Tabelle <b>inplayquotes</b> wird hinzugefügt.
 
 # Template-Änderungen
 <blockquote>
-  {$post['inplayquotes']} // postbit, postbit_classic
+  {$post['inplayquotes']} // postbit, postbit_classic<br />
   ruft das Template inplayquotes_postbit auf (Button für das Eintragen von Zitaten)
   
-  {$post['quoted']} // postbit, postbit_classic
+  {$post['quoted']} // postbit, postbit_classic<br />
   ruft ein Random-Zitat aus dem Post auf
   
-  {$inplayquotes} // index
+  {$inplayquotes} // index<br />
   ruft die Box mit einem zufällig ausgewählten Zitat auf dem Index auf
   
-  {$inplayquotes_member_profile} // member_profile
+  {$inplayquotes_member_profile} // member_profile<br />
   ruft ein Random-Zitat im User-Profil auf
 </blockquote>
 
@@ -58,3 +58,10 @@ Du bist von einer älteren Version des Plugins hier? Dann gehe bitte wiefolgt zu
   <li><b>Aktiviere</b> das Plugin Inplayzitate (3.0)
   <li>Alle neuen Funktionen sollten aktiv sein.
 </ul>
+
+# Demo
+<center>
+<img src="https://snipboard.io/4WmFwY.jpg" />
+<img src="https://snipboard.io/KTADOy.jpg" />
+<img src="https://snipboard.io/Eihy3j.jpg" />
+<img src="https://snipboard.io/n45FU7.jpg" />
