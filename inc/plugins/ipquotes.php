@@ -9,6 +9,10 @@ $plugins->add_hook("misc_start", "ipquotes_misc");
 $plugins->add_hook("index_start", "ipquotes_index");
 $plugins->add_hook("admin_formcontainer_output_row", "ipquotes_permission");
 $plugins->add_hook("admin_user_groups_edit_commit", "ipquotes_permission_commit");
+$plugins->add_hook("member_profile_end", "ipquotes_profile");
+if(class_exists('MybbStuff_MyAlerts_AlertTypeManager')) {
+	$plugins->add_hook("global_start", "ipquotes_alerts");
+}
 
 function ipquotes_info()
 {
@@ -25,6 +29,8 @@ function ipquotes_info()
 		"version"	=> "3.0",
 		"compatibility" => "18*"
 	];
+
+	return $ipquotes;
 }
 
 function ipquotes_install()
@@ -220,17 +226,18 @@ function ipquotes_activate()
   <td class="trow1">Zitat<br /><span class="smalltext">{$lang->inplayquotes_add_desc}</span></td>
 </tr>
 	  <tr>
-		  <td class="trow1"><textarea name="ipquote" id="quotebox{$post[\'pid\']}"></textarea></td>
+		  <td class="trow1"><textarea name="ipquote" id="quotebox{$post[\'pid\']}" cols="75"></textarea></td>
   <tr>
   <td class="trow1" colspan="2" align="center">
   <input type="submit" value="{$lang->inplayquotes_add}" />
   </td>
   </tr>
   </table>
-  </form>
   </div>
+  </form>
   <a href="#closepop" class="closepop"></a>
-  {$inplayquotes_postbit_js}'),
+  {$inplayquotes_postbit_js}
+  </div>'),
 		'sid'		=> '-1',
 		'version'	=> '',
 		'dateline'	=> TIME_NOW
@@ -253,6 +260,24 @@ function ipquotes_activate()
 		'dateline'	=> TIME_NOW
     ];
 	$db->insert_query("templates", $inplayquotes_postbit_js);
+
+	$inplayquotes_postbit_quoted = [
+		'title'		=> 'inplayquotes_postbit_quoted',
+		'template'	=> $db->escape_string('<div class="inplayquotes-quote">{$inplayquote}</div>'),
+		'sid'		=> '-1',
+		'version'	=> '',
+		'dateline'	=> TIME_NOW
+    ];
+	$db->insert_query("templates", $inplayquotes_postbit_quoted);
+
+	$inplayquotes_member_profile = [
+		'title'		=> 'inplayquotes_member_profile',
+		'template'	=> $db->escape_string('<div class="inplayquotes-quote">{$inplayquote}</div>'),
+		'sid'		=> '-1',
+		'version'	=> '',
+		'dateline'	=> TIME_NOW
+    ];
+	$db->insert_query("templates", $inplayquotes_member_profile);
 
 }
 
@@ -322,17 +347,24 @@ function ipquotes_permission_commit()
 
 function ipquotes_postbit(&$post)
 {
-	global $lang, $templates, $db, $mybb, $forum;
+	global $lang, $templates, $db, $mybb, $forum, $inplayquotes_postbit_js;
 	$lang->load('ipquotes');
 
 	// insert inplayquote button to inplay boards
-	$quote_forums = $mybb->settings['ipquotes_forums'];
+	$quote_forums = $mybb->settings['inplay_id'];
 	$quote_forums = explode(",", $quote_forums);
 	$forum['parentlist'] = ",".$forum['parentlist'].",";
 	foreach($quote_forums as $quote_forum) {
 		if(!empty($quote_forum)) {
 			if(preg_match("/,{$quote_forum},/i", $forum['parentlist']) || $quote_forums == -1) {
-                eval("\$inplayquotes_js = \"".$templates->get("inplayquotes_postbit_js")."\";");
+				// check if there are quotes to this post already
+				$post['quoted'] = "";
+				$sql = "SELECT quote FROM ".TABLE_PREFIX."inplayquotes WHERE pid = '{$post['pid']}' ORDER BY rand() LIMIT 1";
+				$inplayquote = $db->fetch_field($db->query($sql), "quote");
+				if($inplayquote) {
+					$post['quoted'] = eval($templates->render("inplayquotes_postbit_quoted"));
+				}
+                eval("\$inplayquotes_postbit_js = \"".$templates->get("inplayquotes_postbit_js")."\";");
 		        $post['inplayquotes'] = eval($templates->render("inplayquotes_postbit"));
 		        return $post;
 			}
@@ -356,7 +388,7 @@ function ipquotes_misc()
 
 		$pid = $mybb->input['pid'];
         $post = get_post($pid);
-		$quote = $mybb->get_input('quote');
+		$quote = $mybb->get_input('ipquote');
 			$new_record = array(
 				"uid" => (int)$post['uid'],
 				"tid" => (int)$post['tid'],
@@ -364,13 +396,41 @@ function ipquotes_misc()
 				"timestamp" => TIME_NOW,
 				"quote" => $db->escape_string($quote)
 			);
+
+			if(class_exists('MybbStuff_MyAlerts_AlertTypeManager')) {
+				$user = get_user($post['uid']);
+				$alertType = MybbStuff_MyAlerts_AlertTypeManager::getInstance()->getByCode('inplayquotes_new');
+				if ($alertType != NULL && $alertType->getEnabled()) {
+					$alert = new MybbStuff_MyAlerts_Entity_Alert((int)$uid, $alertType, (int)$uid);
+					$alert->setExtraDetails([
+						'username' => $user['username']
+					]);
+					MybbStuff_MyAlerts_AlertManager::getInstance()->addAlert($alert);
+				}
+			}
+			if($db->table_exists("follow")) {
+			$query = $db->simple_select("follow", "fromid", "toid='$uid'");
+				while($follower = $db->fetch_array($query)) {
+					if(class_exists('MybbStuff_MyAlerts_AlertTypeManager')) {
+						$user = get_user($uid);
+						$alertType = MybbStuff_MyAlerts_AlertTypeManager::getInstance()->getByCode('inplayquotes_new');
+						if ($alertType != NULL && $alertType->getEnabled()) {
+							$alert = new MybbStuff_MyAlerts_Entity_Alert((int)$follower['fromid'], $alertType, (int)$uid);
+							$alert->setExtraDetails([
+								'username' => $user['username']
+							]);
+							MybbStuff_MyAlerts_AlertManager::getInstance()->addAlert($alert);
+						}
+					}	
+				}
+			}
+
 			$insert_array = $db->insert_query("inplayquotes", $new_record);
 			$insert_quote = "<div class=\"pm_alert\">{$lang->ipquotes_success}</div>";
-		}
         redirect("showthread.php?tid={$post['tid']}&pid={$pid}#pid{$pid}");	  
 	}
 
-	if($mybb->input['action'] == "ipquotes_overview")
+	if($mybb->input['action'] == "inplayquotes_overview")
 	{
 		if(!$mybb->user['uid']) {
 			error_no_permission();
@@ -414,18 +474,18 @@ function ipquotes_misc()
 
 			// let delete quotes
 			if($mybb->usergroup['cancp'] == 1 OR $mybb->user['uid'] == $user['uid']) {
-				eval("\$delete_quote = \"".$templates->get("misc_ipquotes_overview_bit_delete")."\";");
+				eval("\$delete_quote = \"".$templates->get("misc_inplayquotes_overview_bit_delete")."\";");
 			}
 
 			$user['format_avatar'] = "<img src=\"$user[avatar]\" style=\"width: 50px;\" / >";
 			$user['username'] = format_name($user['username'], $user['usergroup'], $user['displaygroup']);
 			$user['username'] = build_profile_link($user['username'], $user['uid']);
-			$quote['thread'] = "<strong>{$lang->ipquotes_in}:</strong> <a href=\"showthread.php?tid={$post[tid]}&pid={$quote[pid]}#pid{$quote[pid]}\">$thread[subject]</a>";
+			$quote['thread'] = "<strong>{$lang->inplayquotes_in}:</strong> <a href=\"showthread.php?tid={$post[tid]}&pid={$quote[pid]}#pid{$quote[pid]}\">$thread[subject]</a>";
 			if($date == $qdate OR empty($qdate)) {
-				eval("\$ipquotes_bit .= \"".$templates->get("misc_ipquotes_overview_bit")."\";");
+				eval("\$inplayquotes_bit .= \"".$templates->get("misc_inplayquotes_overview_bit")."\";");
 			}
 		}		
-		eval("\$inplayquotes = \"".$templates->get("misc_ipquotes_overview")."\";");
+		eval("\$inplayquotes = \"".$templates->get("misc_inplayquotes_overview")."\";");
 		output_page($inplayquotes);
 	}
 
@@ -454,6 +514,82 @@ function ipquotes_index()
 	$quoted['scene']= "<a href=\"showthread.php?tid={$quoted[tid]}&pid={$quoted[pid]}#pid{$quoted[pid]}\">$quoted[subject]</a>";
 	if(!empty($quoted['quote'])) {
 		eval("\$inplayquotes = \"".$templates->get("index_inplayquotes")."\";");
+	}
+}
+
+function ipquotes_profile() {
+	global $db, $memprofile, $inplayquotes_member_profile;
+	$sql = "SELECT quote FROM ".TABLE_PREFIX."inplayquotes WHERE uid = '{$memprofile['uid']}' ORDER BY rand() LIMIT 1";
+	$inplayquote = $db->fetch_field($db->query($sql), "quote");
+	eval("\$inplayquotes_member_profile = \"".$templates->get("inplayquotes_member_profile")."\";");
+}
+
+function ipquotes_alerts() {
+	global $mybb, $lang;
+	$lang->load('ipquotes');
+	/**
+	 * Alert formatter for my custom alert type.
+	 */
+	class MybbStuff_MyAlerts_Formatter_InplayquotesFormatter extends MybbStuff_MyAlerts_Formatter_AbstractFormatter
+	{
+	    /**
+	     * Format an alert into it's output string to be used in both the main alerts listing page and the popup.
+	     *
+	     * @param MybbStuff_MyAlerts_Entity_Alert $alert The alert to format.
+	     *
+	     * @return string The formatted alert string.
+	     */
+	    public function formatAlert(MybbStuff_MyAlerts_Entity_Alert $alert, array $outputAlert)
+	    {
+			global $db;
+			$alertContent = $alert->getExtraDetails();
+            $userid = $db->fetch_field($db->simple_select("users", "uid", "username = '{$alertContent['username']}'"), "uid");
+            $user = get_user($userid);
+            $alertContent['username'] = format_name($user['username'], $user['usergroup'], $user['displaygroup']);
+	        return $this->lang->sprintf(
+	            $this->lang->inplayquotes_new,
+				$outputAlert['from_user'],
+				$alertContent['username'],
+	            $outputAlert['dateline']
+	        );
+	    }
+
+	    /**
+	     * Init function called before running formatAlert(). Used to load language files and initialize other required
+	     * resources.
+	     *
+	     * @return void
+	     */
+	    public function init()
+	    {
+	        if (!$this->lang->inplayquotes) {
+	            $this->lang->load('inplayquotes');
+	        }
+	    }
+
+	    /**
+	     * Build a link to an alert's content so that the system can redirect to it.
+	     *
+	     * @param MybbStuff_MyAlerts_Entity_Alert $alert The alert to build the link for.
+	     *
+	     * @return string The built alert, preferably an absolute link.
+	     */
+	    public function buildShowLink(MybbStuff_MyAlerts_Entity_Alert $alert)
+	    {
+	        return $this->mybb->settings['bburl'] . '/misc.php?action=inplayquotes_overview&user=' . $alert->getObjectId();
+	    }
+	}
+
+	if (class_exists('MybbStuff_MyAlerts_AlertFormatterManager')) {
+		$formatterManager = MybbStuff_MyAlerts_AlertFormatterManager::getInstance();
+
+		if (!$formatterManager) {
+			$formatterManager = MybbStuff_MyAlerts_AlertFormatterManager::createInstance($mybb, $lang);
+		}
+
+		$formatterManager->registerFormatter(
+				new MybbStuff_MyAlerts_Formatter_InplayquotesFormatter($mybb, $lang, 'inplayquotes_new')
+		);
 	}
 }
 ?>

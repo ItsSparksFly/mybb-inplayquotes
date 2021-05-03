@@ -14,4 +14,7 @@ $l['inplayquotes_by'] = "Zitat von";
 $l['inplayquotes_in'] = "In";
 $l['inplayquotes_add'] = "Inplayzitat hinzufügen";
 $l['inplayquotes_add_desc'] = "Folgendes Zitat wird als denkwürdiger Inplay-Moment eingetragen.";
+
+$l['inplayquotes_new'] = "{1} hat ein Zitat von {2} eingetragen!";
+$l['myalerts_setting_inplayquotes_new'] = "Benachrichtigung bei neuen Inplayzitaten?";
 ?>
