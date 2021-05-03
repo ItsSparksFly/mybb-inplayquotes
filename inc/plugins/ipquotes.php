@@ -125,7 +125,7 @@ function ipquotes_activate()
 	   $css = array(
         'name' => 'ipquotes.css',
         'tid' => 1,
-        "stylesheet" => '.inplayquotes-quote { font-family: "georgia", serif; font-size: 20px; letter-spacing: -2px; text-transform: lowercase; text-align: center; }',
+        "stylesheet" => '.inplayquotes-quote { font-family: "georgia", serif; font-size: 22px; letter-spacing: -1px; text-transform: lowercase; text-align: center; }',
         'cachefile' => $db->escape_string(str_replace('/', '', 'ipquotes.css')),
         'lastmodified' => time(),
         'attachedto' => ''
@@ -144,7 +144,10 @@ function ipquotes_activate()
 	include MYBB_ROOT."/inc/adminfunctions_templates.php";
 	find_replace_templatesets("postbit_classic", "#".preg_quote('{$post[\'button_edit\']}')."#i", '{$post[\'inplayquotes\']}{$post[\'button_edit\']}');
 	find_replace_templatesets("postbit", "#".preg_quote('{$post[\'button_edit\']}')."#i", '{$post[\'inplayquotes\']}{$post[\'button_edit\']}');
+	find_replace_templatesets("postbit_classic", "#".preg_quote('{$post[\'message\']}')."#i", '{$post[\'quoted\']}{$post[\'message\']}');
+	find_replace_templatesets("postbit", "#".preg_quote('{$post[\'message\']}')."#i", '{$post[\'quoted\']}{$post[\'message\']}');
 	find_replace_templatesets("index", "#".preg_quote('{$footer}')."#i", '{$inplayquotes}{$footer}');
+	find_replace_templatesets("member_profile", "#".preg_quote('{$awaybit}')."#i", '{$inplayquotes_member_profile}{$awaybit}');
 
 	$misc_inplayquotes_overview = [
 		'title'		=> 'misc_inplayquotes_overview',
@@ -298,7 +301,7 @@ function ipquotes_activate()
 
 	$inplayquotes_postbit_quoted = [
 		'title'		=> 'inplayquotes_postbit_quoted',
-		'template'	=> $db->escape_string('<div class="inplayquotes-quote">{$inplayquote}</div>'),
+		'template'	=> $db->escape_string('<div class="inplayquotes-quote">&laquo; {$inplayquote} &raquo;</div>'),
 		'sid'		=> '-1',
 		'version'	=> '',
 		'dateline'	=> TIME_NOW
@@ -307,7 +310,7 @@ function ipquotes_activate()
 
 	$inplayquotes_member_profile = [
 		'title'		=> 'inplayquotes_member_profile',
-		'template'	=> $db->escape_string('<div class="inplayquotes-quote">{$inplayquote}</div>'),
+		'template'	=> $db->escape_string('<div class="inplayquotes-quote">&laquo; {$inplayquote} &raquo;</div>'),
 		'sid'		=> '-1',
 		'version'	=> '',
 		'dateline'	=> TIME_NOW
@@ -375,7 +378,10 @@ function ipquotes_deactivate()
 	include MYBB_ROOT."/inc/adminfunctions_templates.php";
 	find_replace_templatesets("postbit_classic", "#".preg_quote('{$post[\'inplayquotes\']}')."#i", '', 0);
 	find_replace_templatesets("postbit", "#".preg_quote('{$post[\'inplayquotes\']}')."#i", '', 0);
+	find_replace_templatesets("postbit_classic", "#".preg_quote('{$post[\'quoted\']}')."#i", '', 0);
+	find_replace_templatesets("postbit", "#".preg_quote('{$post[\'quoted\']}')."#i", '', 0);
 	find_replace_templatesets("index", "#".preg_quote('{$inplayquotes}')."#i", '', 0);
+	find_replace_templatesets("member_profile", "#".preg_quote('{$inplayquotes_member_profile}')."#i", '', 0);
 
 	$db->delete_query("templates", "title LIKE '%inplayquotes%'");
 }
@@ -454,7 +460,7 @@ function ipquotes_misc()
 				$user = get_user($post['uid']);
 				$alertType = MybbStuff_MyAlerts_AlertTypeManager::getInstance()->getByCode('inplayquotes_new');
 				if ($alertType != NULL && $alertType->getEnabled()) {
-					$alert = new MybbStuff_MyAlerts_Entity_Alert((int)$uid, $alertType, (int)$uid);
+					$alert = new MybbStuff_MyAlerts_Entity_Alert((int)$post['uid'], $alertType, (int)$uid);
 					$alert->setExtraDetails([
 						'username' => $user['username']
 					]);
@@ -571,7 +577,7 @@ function ipquotes_index()
 }
 
 function ipquotes_profile() {
-	global $db, $memprofile, $inplayquotes_member_profile;
+	global $db, $templates, $memprofile, $inplayquotes_member_profile;
 	$sql = "SELECT quote FROM ".TABLE_PREFIX."inplayquotes WHERE uid = '{$memprofile['uid']}' ORDER BY rand() LIMIT 1";
 	$inplayquote = $db->fetch_field($db->query($sql), "quote");
 	eval("\$inplayquotes_member_profile = \"".$templates->get("inplayquotes_member_profile")."\";");
