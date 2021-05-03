@@ -576,7 +576,7 @@ function ipquotes_misc()
 			$user['format_avatar'] = "<img src=\"$user[avatar]\" style=\"width: 50px;\" / >";
 			$user['username'] = format_name($user['username'], $user['usergroup'], $user['displaygroup']);
 			$user['username'] = build_profile_link($user['username'], $user['uid']);
-			$quote['thread'] = "<strong>{$lang->inplayquotes_in}:</strong> <a href=\"showthread.php?tid={$post['tid']}&pid={$quote['pid']}#pid{$quote['pid']}\">$thread['subject']</a>";
+			$quote['thread'] = "<strong>{$lang->inplayquotes_in}:</strong> <a href=\"showthread.php?tid={$post['tid']}&pid={$quote['pid']}#pid{$quote['pid']}\">{$thread['subject']}</a>";
 			if($date == $qdate OR empty($qdate)) {
 				eval("\$inplayquotes_bit .= \"".$templates->get("misc_inplayquotes_overview_bit")."\";");
 			}
