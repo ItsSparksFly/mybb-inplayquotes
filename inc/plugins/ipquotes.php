@@ -125,7 +125,44 @@ function ipquotes_activate()
 	   $css = array(
         'name' => 'ipquotes.css',
         'tid' => 1,
-        "stylesheet" => '.inplayquotes-quote { font-family: "georgia", serif; font-size: 22px; letter-spacing: -1px; text-transform: lowercase; text-align: center; }',
+        "stylesheet" => '.inplayquotes-quote { font-family: "georgia", serif; font-size: 22px; letter-spacing: -1px; text-transform: lowercase; text-align: center; }
+		.ip-quotes-pop { 
+			position: fixed; 
+			top: 0; 
+			right: 0; 
+			bottom: 0; 
+			left: 0; 
+			background: hsla(0, 0%, 0%, 0.5); 
+			z-index: 1; 
+			opacity:0; 
+			-webkit-transition: .5s ease-in-out; 
+			-moz-transition: .5s ease-in-out; 
+			transition: .5s ease-in-out; 
+			 pointer-events: none; 
+		 } 
+				
+		.ip-quotes-pop:target { 
+			opacity:1;
+			pointer-events: auto; 
+		} 
+				
+		.ip-quotes-pop > .ip-quotes-popup { 
+			background: transparent; 
+			width: 450px; 
+			position: relative; 
+			margin: 10% auto; 
+			padding: 25px; 
+			z-index: 1; 
+		} 
+				
+		.closepop { 
+			 position: absolute; 
+			right: -5px; 
+			top:-5px; 
+			width: 100%; 
+			height: 100%; 
+			z-index:0; 
+		}',
         'cachefile' => $db->escape_string(str_replace('/', '', 'ipquotes.css')),
         'lastmodified' => time(),
         'attachedto' => ''
@@ -539,7 +576,7 @@ function ipquotes_misc()
 			$user['format_avatar'] = "<img src=\"$user[avatar]\" style=\"width: 50px;\" / >";
 			$user['username'] = format_name($user['username'], $user['usergroup'], $user['displaygroup']);
 			$user['username'] = build_profile_link($user['username'], $user['uid']);
-			$quote['thread'] = "<strong>{$lang->inplayquotes_in}:</strong> <a href=\"showthread.php?tid={$post[tid]}&pid={$quote[pid]}#pid{$quote[pid]}\">$thread[subject]</a>";
+			$quote['thread'] = "<strong>{$lang->inplayquotes_in}:</strong> <a href=\"showthread.php?tid={$post['tid']}&pid={$quote['pid']}#pid{$quote['pid']}\">$thread['subject']</a>";
 			if($date == $qdate OR empty($qdate)) {
 				eval("\$inplayquotes_bit .= \"".$templates->get("misc_inplayquotes_overview_bit")."\";");
 			}
@@ -570,7 +607,7 @@ function ipquotes_index()
 	LIMIT 1");
 	$quoted = $db->fetch_array($query);
 	$quoted['user'] = build_profile_link($quoted['username'], $quoted['uid']);
-	$quoted['scene']= "<a href=\"showthread.php?tid={$quoted[tid]}&pid={$quoted[pid]}#pid{$quoted[pid]}\">$quoted[subject]</a>";
+	$quoted['scene']= "<a href=\"showthread.php?tid={$quoted['tid']}&pid={$quoted['pid']}#pid{$quoted['pid']}\">{$quoted['subject']}</a>";
 	if(!empty($quoted['quote'])) {
 		eval("\$inplayquotes = \"".$templates->get("index_inplayquotes")."\";");
 	}
