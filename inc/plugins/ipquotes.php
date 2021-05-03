@@ -104,7 +104,42 @@ function ipquotes_install()
 
 function ipquotes_activate()
 {
-	global $db, $post;
+	global $db, $post, $cache;
+
+    if(class_exists('MybbStuff_MyAlerts_AlertTypeManager')) {
+		$alertTypeManager = MybbStuff_MyAlerts_AlertTypeManager::getInstance();
+
+		if (!$alertTypeManager) {
+			$alertTypeManager = MybbStuff_MyAlerts_AlertTypeManager::createInstance($db, $cache);
+		}
+
+		$alertType = new MybbStuff_MyAlerts_Entity_AlertType();
+		$alertType->setCode('inplayquotes_new'); // The codename for your alert type. Can be any unique string.
+		$alertType->setEnabled(true);
+		$alertType->setCanBeUserDisabled(true);
+
+		$alertTypeManager->add($alertType);
+    }
+
+       // CSS  
+	   $css = array(
+        'name' => 'ipquotes.css',
+        'tid' => 1,
+        "stylesheet" => '.inplayquotes-quote { font-family: "georgia", serif; font-size: 20px; letter-spacing: -2px; text-transform: lowercase; text-align: center; }',
+        'cachefile' => $db->escape_string(str_replace('/', '', 'ipquotes.css')),
+        'lastmodified' => time(),
+        'attachedto' => ''
+    );
+
+    require_once MYBB_ADMIN_DIR."inc/functions_themes.php";
+
+    $sid = $db->insert_query("themestylesheets", $css);
+    $db->update_query("themestylesheets", array("cachefile" => "css.php?stylesheet=".$sid), "sid = '".$sid."'", 1);
+
+    $tids = $db->simple_select("themes", "tid");
+    while($theme = $db->fetch_array($tids)) {
+        update_theme_stylesheet_list($theme['tid']);
+    }
 
 	include MYBB_ROOT."/inc/adminfunctions_templates.php";
 	find_replace_templatesets("postbit_classic", "#".preg_quote('{$post[\'button_edit\']}')."#i", '{$post[\'inplayquotes\']}{$post[\'button_edit\']}');
@@ -317,7 +352,25 @@ function ipquotes_uninstall()
 
 function ipquotes_deactivate()
 {
-	global $db;
+	global $db, $cache;
+
+    // drop css
+    require_once MYBB_ADMIN_DIR."inc/functions_themes.php";
+    $db->delete_query("themestylesheets", "name = 'ipquotes.css'");
+    $query = $db->simple_select("themes", "tid");
+    while($theme = $db->fetch_array($query)) {
+        update_theme_stylesheet_list($theme['tid']);
+    }
+
+	if (class_exists('MybbStuff_MyAlerts_AlertTypeManager')) {
+		$alertTypeManager = MybbStuff_MyAlerts_AlertTypeManager::getInstance();
+
+		if (!$alertTypeManager) {
+			$alertTypeManager = MybbStuff_MyAlerts_AlertTypeManager::createInstance($db, $cache);
+		}
+
+		$alertTypeManager->deleteByCode('inplayquotes_new');
+	}
 
 	include MYBB_ROOT."/inc/adminfunctions_templates.php";
 	find_replace_templatesets("postbit_classic", "#".preg_quote('{$post[\'inplayquotes\']}')."#i", '', 0);
